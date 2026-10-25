@@ -326,6 +326,7 @@ def get_association_rules(
 def get_decision_tree(
     max_depth: int = Query(3, ge=2, le=6, description="Maximum tree depth (2 to 6)"),
     criterion: str = Query("gini", pattern="^(gini|entropy)$", description="Split criterion ('gini' or 'entropy')"),
+    class_weight: Optional[str] = Query(None, description="Optional class weighting: 'balanced' or null"),
     x_user_role: Optional[str] = Header(None, alias="X-User-Role")
 ) -> Dict[str, Any]:
     """
@@ -336,7 +337,8 @@ def get_decision_tree(
     try:
         return classification_engine.train_decision_tree(
             max_depth=max_depth,
-            criterion=criterion
+            criterion=criterion,
+            class_weight=class_weight
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Decision tree training error: {str(e)}")

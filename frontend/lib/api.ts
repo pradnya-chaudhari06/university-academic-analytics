@@ -672,13 +672,17 @@ export async function fetchMiningRules(
  */
 export async function fetchMiningDecisionTree(
   maxDepth: number = 3,
-  criterion: 'gini' | 'entropy' = 'gini'
+  criterion: 'gini' | 'entropy' = 'gini',
+  classWeight?: 'balanced' | null
 ): Promise<DecisionTreeMiningResponse> {
   const boundedDepth = Math.max(2, Math.min(6, maxDepth));
   const params = new URLSearchParams({
     max_depth: boundedDepth.toString(),
     criterion,
   });
+  if (classWeight) {
+    params.append('class_weight', classWeight);
+  }
   return apiFetch<DecisionTreeMiningResponse>(`/api/mining/decision-tree?${params.toString()}`);
 }
 

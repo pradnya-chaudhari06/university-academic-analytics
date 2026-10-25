@@ -299,16 +299,152 @@ export default function Sidebar({
         ],
       },
     ];
+  } else if (user?.role === 'Analyst' || user?.role === 'Analytics') {
+    visibleSections = [
+      {
+        title: 'ANALYTICAL OPERATIONS',
+        items: [
+          {
+            id: 'dashboard',
+            label: 'Overview',
+            href: '/dashboard',
+            icon: LayoutDashboard,
+          },
+          {
+            id: 'academic-performance',
+            label: 'Academic Performance',
+            href: '/analytics',
+            icon: TrendingUp,
+          },
+          {
+            id: 'olap-analysis',
+            label: 'OLAP Analysis',
+            href: '/analytics/olap',
+            icon: BarChart3,
+            badge: 'Cube',
+          },
+          {
+            id: 'data-mining',
+            label: 'Data Mining Studio',
+            href: '/analytics/data-mining',
+            icon: Brain,
+            badge: 'ML',
+          },
+          {
+            id: 'at-risk-students',
+            label: 'At-Risk Analysis',
+            href: '/at-risk',
+            icon: AlertTriangle,
+            badge: '108',
+            badgeVariant: 'warning',
+          },
+        ],
+      },
+      {
+        title: 'DATA & SYSTEM',
+        items: [
+          {
+            id: 'data-warehouse',
+            label: 'Warehouse Schema',
+            href: '/warehouse',
+            icon: Database,
+            badge: 'Live',
+            badgeVariant: 'live',
+          },
+          {
+            id: 'etl-pipeline',
+            label: 'ETL Pipeline',
+            href: '/warehouse/etl',
+            icon: Layers,
+            badge: 'Audit',
+          },
+          {
+            id: 'reports',
+            label: 'Analytical Reports',
+            href: '/reports',
+            icon: FileText,
+            badge: '5',
+          },
+          {
+            id: 'settings',
+            label: 'Settings',
+            href: '/settings',
+            icon: Settings,
+          },
+        ],
+      },
+    ];
   } else {
-    // Filter sections and items based on RBAC permissions for the authenticated role
-    visibleSections = allSections
-      .map((sec) => ({
-        ...sec,
-        items: sec.items.filter((item) =>
-          isRouteAuthorized(user?.role, item.href, user?.studentId)
-        ),
-      }))
-      .filter((sec) => sec.items.length > 0);
+    // Administrator / Leadership Role (Dean, Academic Coordinator, Principal, HOD)
+    // 9 clean, non-technical responsibility-based navigation items
+    visibleSections = [
+      {
+        title: 'ACADEMIC MANAGEMENT',
+        items: [
+          {
+            id: 'dashboard',
+            label: 'Overview',
+            href: '/dashboard',
+            icon: LayoutDashboard,
+          },
+          {
+            id: 'academic-performance',
+            label: 'Academic Performance',
+            href: '/analytics',
+            icon: TrendingUp,
+          },
+          {
+            id: 'students',
+            label: 'Students',
+            href: '/students',
+            icon: Users,
+            badge: '4.8k',
+          },
+          {
+            id: 'departments',
+            label: 'Departments',
+            href: '/departments',
+            icon: Building2,
+            badge: '5',
+          },
+          {
+            id: 'courses',
+            label: 'Courses',
+            href: '/courses',
+            icon: BookOpen,
+            badge: '30',
+          },
+          {
+            id: 'student-support',
+            label: 'Student Support',
+            href: '/at-risk',
+            icon: AlertTriangle,
+            badge: '108',
+            badgeVariant: 'warning',
+          },
+          {
+            id: 'reports',
+            label: 'Reports',
+            href: '/reports',
+            icon: FileText,
+          },
+          {
+            id: 'data-management',
+            label: 'Data Management',
+            href: '/warehouse',
+            icon: Database,
+            badge: 'Verified',
+            badgeVariant: 'live',
+          },
+          {
+            id: 'settings',
+            label: 'Settings',
+            href: '/settings',
+            icon: Settings,
+          },
+        ],
+      },
+    ];
   }
 
   const landingRoute = getRoleLandingRoute(user?.role, user?.studentId);

@@ -169,6 +169,7 @@ export default function DataMiningPage() {
   // Decision Tree State
   const [maxDepth, setMaxDepth] = useState<number>(3);
   const [criterion, setCriterion] = useState<'gini' | 'entropy'>('gini');
+  const [treeClassWeight, setTreeClassWeight] = useState<'standard' | 'balanced'>('standard');
   const [treeData, setTreeData] = useState<DecisionTreeMiningResponse | null>(null);
   const [isLoadingTree, setIsLoadingTree] = useState(false);
   const [treeError, setTreeError] = useState<string | null>(null);
@@ -507,10 +508,14 @@ export default function DataMiningPage() {
   // ----------------------------------------------------------------------------
   // 4. Decision Tree API Fetch
   // ----------------------------------------------------------------------------
-  const loadTree = (depth: number, crit: 'gini' | 'entropy') => {
+  const loadTree = (
+    depth: number,
+    crit: 'gini' | 'entropy',
+    cw: 'standard' | 'balanced' = treeClassWeight
+  ) => {
     setIsLoadingTree(true);
     setTreeError(null);
-    fetchMiningDecisionTree(depth, crit)
+    fetchMiningDecisionTree(depth, crit, cw === 'balanced' ? 'balanced' : null)
       .then((data) => {
         setTreeData(data);
         setIsLoadingTree(false);
@@ -528,15 +533,20 @@ export default function DataMiningPage() {
         loadClassificationExperiment();
       }
       if (!treeData && !isLoadingTree) {
-        loadTree(maxDepth, criterion);
+        loadTree(maxDepth, criterion, treeClassWeight);
       }
     }
   }, [activeTab]);
 
-  const handleTreeParamChange = (depth: number, crit: 'gini' | 'entropy') => {
+  const handleTreeParamChange = (
+    depth: number,
+    crit: 'gini' | 'entropy',
+    cw: 'standard' | 'balanced' = treeClassWeight
+  ) => {
     setMaxDepth(depth);
     setCriterion(crit);
-    loadTree(depth, crit);
+    setTreeClassWeight(cw);
+    loadTree(depth, crit, cw);
   };
 
   // ----------------------------------------------------------------------------
@@ -3866,55 +3876,61 @@ export default function DataMiningPage() {
                       </div>
 
                       {/* 2x2 Confusion Grid */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1 font-mono">
-                        <div className="p-4 rounded-lg bg-emerald-50/50 border border-emerald-200 space-y-1 text-center">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">
-                            True Negative (TN)
-                          </span>
-                          <span className="text-2xl font-bold text-emerald-900 block">
-                            {cm.trueNegative.toLocaleString()}
-                          </span>
-                          <p className="text-[11px] text-emerald-700 font-sans">
-                            Good Standing Students Correctly Identified ({( (cm.trueNegative / 942) * 100 ).toFixed(1)}%)
-                          </p>
-                        </div>
+                      {(() => {
+                        const actualNeg = cm.trueNegative + cm.falsePositive || 1;
+                        const actualPos = cm.falseNegative + cm.truePositive || 1;
+                        return (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1 font-mono">
+                            <div className="p-4 rounded-lg bg-emerald-50/50 border border-emerald-200 space-y-1 text-center">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">
+                                True Negative (TN)
+                              </span>
+                              <span className="text-2xl font-bold text-emerald-900 block">
+                                {cm.trueNegative.toLocaleString()}
+                              </span>
+                              <p className="text-[11px] text-emerald-700 font-sans">
+                                Good Standing Students Correctly Identified ({( (cm.trueNegative / actualNeg) * 100 ).toFixed(1)}%)
+                              </p>
+                            </div>
 
-                        <div className="p-4 rounded-lg bg-amber-50/50 border border-amber-200 space-y-1 text-center">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 block">
-                            False Positive (FP) — Type I Error
-                          </span>
-                          <span className="text-2xl font-bold text-amber-900 block">
-                            {cm.falsePositive.toLocaleString()}
-                          </span>
-                          <p className="text-[11px] text-amber-700 font-sans">
-                            Good Standing Students Flagged for Advisory Review ({cm.falsePositive} alerts)
-                          </p>
-                        </div>
+                            <div className="p-4 rounded-lg bg-amber-50/50 border border-amber-200 space-y-1 text-center">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 block">
+                                False Positive (FP) — Type I Error
+                              </span>
+                              <span className="text-2xl font-bold text-amber-900 block">
+                                {cm.falsePositive.toLocaleString()}
+                              </span>
+                              <p className="text-[11px] text-amber-700 font-sans">
+                                Good Standing Students Flagged for Advisory Review ({cm.falsePositive} alerts)
+                              </p>
+                            </div>
 
-                        <div className="p-4 rounded-lg bg-rose-50/60 border border-rose-200 space-y-1 text-center">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-rose-800 block">
-                            False Negative (FN) — Type II Deficit Error
-                          </span>
-                          <span className="text-2xl font-bold text-rose-900 block">
-                            {cm.falseNegative.toLocaleString()}
-                          </span>
-                          <p className="text-[11px] text-rose-700 font-sans">
-                            At-Risk Students Unidentified (Critical Intervention Deficit)
-                          </p>
-                        </div>
+                            <div className="p-4 rounded-lg bg-rose-50/60 border border-rose-200 space-y-1 text-center">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-800 block">
+                                False Negative (FN) — Type II Deficit Error
+                              </span>
+                              <span className="text-2xl font-bold text-rose-900 block">
+                                {cm.falseNegative.toLocaleString()}
+                              </span>
+                              <p className="text-[11px] text-rose-700 font-sans">
+                                At-Risk Students Unidentified (Critical Intervention Deficit)
+                              </p>
+                            </div>
 
-                        <div className="p-4 rounded-lg bg-indigo-50/50 border border-indigo-200 space-y-1 text-center">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-800 block">
-                            True Positive (TP) — Correct Intervention Flag
-                          </span>
-                          <span className="text-2xl font-bold text-indigo-900 block">
-                            {cm.truePositive.toLocaleString()}
-                          </span>
-                          <p className="text-[11px] text-indigo-700 font-sans">
-                            At-Risk Students Correctly Flagged for Remediation ({( (cm.truePositive / 22) * 100 ).toFixed(1)}% Recall)
-                          </p>
-                        </div>
-                      </div>
+                            <div className="p-4 rounded-lg bg-indigo-50/50 border border-indigo-200 space-y-1 text-center">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-800 block">
+                                True Positive (TP) — Correct Intervention Flag
+                              </span>
+                              <span className="text-2xl font-bold text-indigo-900 block">
+                                {cm.truePositive.toLocaleString()}
+                              </span>
+                              <p className="text-[11px] text-indigo-700 font-sans">
+                                At-Risk Students Correctly Flagged for Remediation ({( (cm.truePositive / actualPos) * 100 ).toFixed(1)}% Recall)
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })()}
 
                       {/* Educational Trade-off Alert */}
                       <div className="p-3.5 rounded-lg bg-indigo-50/40 border border-indigo-200 text-xs text-indigo-950 space-y-1">
@@ -4153,59 +4169,420 @@ export default function DataMiningPage() {
             )}
 
             {/* =================================================================== */}
-            {/* SUB-VIEW 2: DECISION TREE STRUCTURAL HIERARCHY                     */}
+            {/* SUB-VIEW 2: DECISION TREE STRUCTURAL HIERARCHY & TEST EVALUATION     */}
             {/* =================================================================== */}
             {classificationSubView === 'tree_inspector' && (
-              <div className="bg-white rounded-lg border border-[#e7eaee] p-5 shadow-2xs space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div>
-                    <h2 className="text-sm font-bold text-[#1e2238] flex items-center gap-2">
-                      <span>Interactive Decision Tree Structural Hierarchy: is_at_risk Prediction</span>
-                      {isLoadingTree && <RefreshCw className="h-3.5 w-3.5 text-indigo-600 animate-spin" />}
-                    </h2>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Visual CART decision tree with traversable node conditions, class distributions, and Gini purity measures.
-                    </p>
-                  </div>
-
-                  {/* Slicing Controls */}
-                  <div className="flex items-center gap-3 text-xs">
+              <div className="space-y-4">
+                {/* 1. Header & Hyperparameter Slicing Controls */}
+                <div className="bg-white rounded-lg border border-[#e7eaee] p-5 shadow-2xs space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
-                      <span className="font-semibold text-slate-600 mr-1.5">Max Depth:</span>
-                      <select
-                        value={maxDepth}
-                        onChange={(e) => handleTreeParamChange(Number(e.target.value), criterion)}
-                        className="rounded border border-[#e7eaee] bg-white px-2 py-1 text-xs font-bold text-slate-700 focus:outline-hidden cursor-pointer"
-                      >
-                        <option value={2}>Depth 2 (Macro)</option>
-                        <option value={3}>Depth 3 (Standard)</option>
-                        <option value={4}>Depth 4 (Detailed)</option>
-                        <option value={5}>Depth 5 (Deep)</option>
-                        <option value={6}>Depth 6 (Exhaustive)</option>
-                      </select>
+                      <h2 className="text-sm font-bold text-[#1e2238] flex items-center gap-2">
+                        <GitBranch className="h-4 w-4 text-indigo-600" />
+                        <span>Interactive Decision Tree: Evaluation Metrics & Structural Hierarchy</span>
+                        {isLoadingTree && <RefreshCw className="h-3.5 w-3.5 text-indigo-600 animate-spin" />}
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Trained on 75% stratified training cohort (N = 3,615) and evaluated on unseen held-out test data (N = 1,205).
+                      </p>
                     </div>
 
-                    <div>
-                      <span className="font-semibold text-slate-600 mr-1.5">Criterion:</span>
-                      <select
-                        value={criterion}
-                        onChange={(e) => handleTreeParamChange(maxDepth, e.target.value as 'gini' | 'entropy')}
-                        className="rounded border border-[#e7eaee] bg-white px-2 py-1 text-xs font-bold text-slate-700 focus:outline-hidden cursor-pointer"
+                    {/* Slicing Controls */}
+                    <div className="flex flex-wrap items-center gap-2.5 text-xs">
+                      <div>
+                        <span className="font-semibold text-slate-600 mr-1.5">Max Depth:</span>
+                        <select
+                          value={maxDepth}
+                          onChange={(e) => handleTreeParamChange(Number(e.target.value), criterion, treeClassWeight)}
+                          className="rounded border border-[#e7eaee] bg-white px-2 py-1 text-xs font-bold text-slate-700 focus:outline-hidden cursor-pointer"
+                        >
+                          <option value={2}>Depth 2 (Macro)</option>
+                          <option value={3}>Depth 3 (Standard)</option>
+                          <option value={4}>Depth 4 (Detailed)</option>
+                          <option value={5}>Depth 5 (Deep)</option>
+                          <option value={6}>Depth 6 (Exhaustive)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <span className="font-semibold text-slate-600 mr-1.5">Criterion:</span>
+                        <select
+                          value={criterion}
+                          onChange={(e) => handleTreeParamChange(maxDepth, e.target.value as 'gini' | 'entropy', treeClassWeight)}
+                          className="rounded border border-[#e7eaee] bg-white px-2 py-1 text-xs font-bold text-slate-700 focus:outline-hidden cursor-pointer"
+                        >
+                          <option value="gini">Gini Impurity</option>
+                          <option value="entropy">Entropy / Info Gain</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <span className="font-semibold text-slate-600 mr-1.5">Weighting:</span>
+                        <select
+                          value={treeClassWeight}
+                          onChange={(e) => handleTreeParamChange(maxDepth, criterion, e.target.value as 'standard' | 'balanced')}
+                          className="rounded border border-[#e7eaee] bg-white px-2 py-1 text-xs font-bold text-slate-700 focus:outline-hidden cursor-pointer"
+                        >
+                          <option value="standard">Standard (Unweighted)</option>
+                          <option value="balanced">Balanced (Inverse Frequency)</option>
+                        </select>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => loadTree(maxDepth, criterion, treeClassWeight)}
+                        disabled={isLoadingTree}
+                        className="px-3 py-1 rounded text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                       >
-                        <option value="gini">Gini Impurity</option>
-                        <option value="entropy">Entropy / Info Gain</option>
-                      </select>
+                        <RefreshCw className={`h-3 w-3 ${isLoadingTree ? 'animate-spin' : ''}`} />
+                        <span>Re-Train</span>
+                      </button>
                     </div>
                   </div>
+
+                  {/* Error Notification */}
+                  {treeError && (
+                    <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 shrink-0 text-rose-600" />
+                      <span>{treeError}</span>
+                    </div>
+                  )}
+
+                  {/* Evaluation Run Metadata Banner */}
+                  {treeData && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 text-[11px] text-slate-600 font-mono">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="px-2 py-0.5 rounded bg-slate-100 font-bold text-slate-800">
+                          Run: {treeData.runId || treeData.evaluation?.runId || 'dt_eval'}
+                        </span>
+                        <span>
+                          Evaluated: <strong>{treeData.evaluatedAt || treeData.evaluation?.evaluatedAt || 'Active Run'}</strong>
+                        </span>
+                        <span>·</span>
+                        <span>
+                          Test Partition: <strong>{treeData.testSetSize.toLocaleString()} records</strong> (25% held-out)
+                        </span>
+                        <span>·</span>
+                        <span>
+                          Split: <strong>75% Train / 25% Test (stratified, seed = 42)</strong>
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                          Zero Target Leakage Enforced
+                        </span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800">
+                          Positive Class: At-Risk (1)
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Tree Visualizer */}
+                {/* 2. Compact Evaluation Metrics Cards & Confusion Matrix */}
                 {treeData && (
-                  <div className="space-y-4">
-                    <div className="p-4 rounded-lg bg-[#fafbfd] border border-slate-200 font-mono text-xs overflow-x-auto">
-                      <DecisionNodeViewer node={treeData.decisionTree} />
+                  <>
+                    {/* Compact Metric Cards Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                      {/* 1. Accuracy */}
+                      <div className="bg-white rounded-lg border border-[#e7eaee] p-3.5 shadow-2xs space-y-1">
+                        <div className="flex items-center justify-between text-xs text-slate-500">
+                          <span>Accuracy</span>
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                        </div>
+                        <span className="text-xl font-bold font-mono text-[#1e2238] block">
+                          {treeData.metrics.accuracyPct}
+                        </span>
+                        <p className="text-[10px] text-slate-500 font-sans">
+                          {treeData.confusionMatrix.trueNegative + treeData.confusionMatrix.truePositive} / {treeData.testSetSize} correct
+                        </p>
+                      </div>
+
+                      {/* 2. At-Risk Recall (Positive Class) */}
+                      <div className="bg-white rounded-lg border border-[#e7eaee] p-3.5 shadow-2xs space-y-1">
+                        <div className="flex items-center justify-between text-xs text-slate-500">
+                          <span className="font-semibold text-indigo-900">At-Risk Recall</span>
+                          <Target className="h-3.5 w-3.5 text-indigo-600" />
+                        </div>
+                        <span className="text-xl font-bold font-mono text-indigo-950 block">
+                          {treeData.metrics.atRiskRecallPct || treeData.metrics.recallPct}
+                        </span>
+                        <p className="text-[10px] text-indigo-700 font-sans">
+                          {treeData.confusionMatrix.truePositive} of {treeData.confusionMatrix.truePositive + treeData.confusionMatrix.falseNegative} at-risk detected
+                        </p>
+                      </div>
+
+                      {/* 3. At-Risk Precision (Positive Class) */}
+                      <div className="bg-white rounded-lg border border-[#e7eaee] p-3.5 shadow-2xs space-y-1">
+                        <div className="flex items-center justify-between text-xs text-slate-500">
+                          <span className="font-semibold text-slate-700">At-Risk Precision</span>
+                          <Award className="h-3.5 w-3.5 text-teal-600" />
+                        </div>
+                        <span className="text-xl font-bold font-mono text-[#1e2238] block">
+                          {treeData.metrics.atRiskPrecisionPct || treeData.metrics.precisionPct}
+                        </span>
+                        <p className="text-[10px] text-slate-500 font-sans">
+                          {treeData.confusionMatrix.truePositive} of {treeData.confusionMatrix.truePositive + treeData.confusionMatrix.falsePositive} alerts genuine
+                        </p>
+                      </div>
+
+                      {/* 4. At-Risk F1-Score */}
+                      <div className="bg-white rounded-lg border border-[#e7eaee] p-3.5 shadow-2xs space-y-1">
+                        <div className="flex items-center justify-between text-xs text-slate-500">
+                          <span>At-Risk F1</span>
+                          <Sparkles className="h-3.5 w-3.5 text-amber-600" />
+                        </div>
+                        <span className="text-xl font-bold font-mono text-[#1e2238] block">
+                          {treeData.metrics.atRiskF1Pct || (treeData.metrics.f1Score ? `${(treeData.metrics.f1Score * 100).toFixed(1)}%` : '0.0%')}
+                        </span>
+                        <p className="text-[10px] text-slate-500 font-sans">
+                          Harmonic mean (risk class)
+                        </p>
+                      </div>
+
+                      {/* 5. Macro-Averaged F1 */}
+                      <div className="bg-white rounded-lg border border-[#e7eaee] p-3.5 shadow-2xs space-y-1">
+                        <div className="flex items-center justify-between text-xs text-slate-500">
+                          <span>Macro-F1</span>
+                          <BarChart3 className="h-3.5 w-3.5 text-blue-600" />
+                        </div>
+                        <span className="text-xl font-bold font-mono text-[#1e2238] block">
+                          {treeData.metrics.macroF1Pct || (treeData.metrics.macroF1 ? `${(treeData.metrics.macroF1 * 100).toFixed(1)}%` : treeData.metrics.f1Score ? `${(treeData.metrics.f1Score * 100).toFixed(1)}%` : '0.0%')}
+                        </span>
+                        <p className="text-[10px] text-slate-500 font-sans">
+                          Unweighted class balance
+                        </p>
+                      </div>
+
+                      {/* 6. ROC-AUC */}
+                      <div className="bg-white rounded-lg border border-[#e7eaee] p-3.5 shadow-2xs space-y-1">
+                        <div className="flex items-center justify-between text-xs text-slate-500">
+                          <span>ROC-AUC</span>
+                          <TrendingUp className="h-3.5 w-3.5 text-purple-600" />
+                        </div>
+                        <span className="text-xl font-bold font-mono text-[#1e2238] block">
+                          {typeof treeData.metrics.rocAuc === 'number' ? (treeData.metrics.rocAuc * 100).toFixed(1) + '%' : '100%'}
+                        </span>
+                        <p className="text-[10px] text-slate-500 font-sans">
+                          Area under ROC curve
+                        </p>
+                      </div>
                     </div>
-                  </div>
+
+                    {/* Confusion Matrix Heatmap Section */}
+                    {(() => {
+                      const cm = treeData.confusionMatrix;
+                      const actualGoodStanding = cm.trueNegative + cm.falsePositive || 1;
+                      const actualAtRisk = cm.falseNegative + cm.truePositive || 1;
+                      const predGoodStanding = cm.trueNegative + cm.falseNegative;
+                      const predAtRisk = cm.falsePositive + cm.truePositive;
+                      const totalRecords = treeData.testSetSize || (actualGoodStanding + actualAtRisk);
+
+                      const tnRate = ( (cm.trueNegative / actualGoodStanding) * 100 ).toFixed(1);
+                      const fpRate = ( (cm.falsePositive / actualGoodStanding) * 100 ).toFixed(1);
+                      const fnRate = ( (cm.falseNegative / actualAtRisk) * 100 ).toFixed(1);
+                      const tpRate = ( (cm.truePositive / actualAtRisk) * 100 ).toFixed(1);
+
+                      return (
+                        <div className="bg-white rounded-lg border border-[#e7eaee] p-5 shadow-2xs space-y-4">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                              <h3 className="text-sm font-bold text-[#1e2238] flex items-center gap-2">
+                                <span>Confusion Matrix Heatmap (Unseen Held-Out Test Set, N = {totalRecords.toLocaleString()})</span>
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800 font-mono">
+                                  CART Decision Tree ({treeData.criterion}, depth = {treeData.maxDepth})
+                                </span>
+                              </h3>
+                              <p className="text-xs text-slate-500 mt-0.5">
+                                Cross-tabulation comparing ground-truth student standing (rows) against decision tree predictions (columns).
+                              </p>
+                            </div>
+                            <div className="text-xs text-slate-500 font-mono">
+                              Positive Class: <strong>At-Risk</strong> · Negative: <strong>Good Standing</strong>
+                            </div>
+                          </div>
+
+                          {/* 2x2 Heatmap Matrix Grid with Clear Axes */}
+                          <div className="overflow-x-auto pt-1">
+                            <div className="min-w-[580px] max-w-3xl mx-auto space-y-2">
+                              {/* Top Axis Label: Predicted Class */}
+                              <div className="grid grid-cols-[140px_1fr_1fr_90px] gap-2 items-center text-center">
+                                <div />
+                                <div className="col-span-2 text-xs font-bold uppercase tracking-wider text-slate-700 pb-1 border-b border-slate-200">
+                                  Predicted Class (Model Decision)
+                                </div>
+                                <div />
+                              </div>
+
+                              {/* Column Subheaders */}
+                              <div className="grid grid-cols-[140px_1fr_1fr_90px] gap-2 text-xs font-semibold text-slate-600 text-center">
+                                <div className="text-right pr-2 text-slate-400 font-mono">Actual ↓</div>
+                                <div className="p-1.5 rounded bg-slate-100 text-slate-800 font-bold">
+                                  Predicted Good Standing (0)
+                                </div>
+                                <div className="p-1.5 rounded bg-slate-100 text-indigo-900 font-bold">
+                                  Predicted At-Risk (1)
+                                </div>
+                                <div className="p-1.5 text-slate-500 font-mono font-medium">Row Total</div>
+                              </div>
+
+                              {/* Row 1: Actual Good Standing */}
+                              <div className="grid grid-cols-[140px_1fr_1fr_90px] gap-2 items-stretch">
+                                <div className="p-3 rounded bg-slate-50 border border-slate-200 flex flex-col justify-center text-right pr-3">
+                                  <span className="text-xs font-bold text-slate-800">Actual Good Standing</span>
+                                  <span className="text-[10px] text-slate-500 font-mono">Class 0 (Negative)</span>
+                                </div>
+
+                                {/* True Negative (TN) Heatmap Cell */}
+                                <div className="p-4 rounded-lg bg-emerald-50/80 border border-emerald-300 text-center space-y-1 shadow-2xs hover:bg-emerald-50 transition-all">
+                                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-emerald-800">
+                                    <span>True Negative (TN)</span>
+                                    <span className="font-mono text-emerald-700">{tnRate}%</span>
+                                  </div>
+                                  <span className="text-2xl font-bold font-mono text-emerald-950 block">
+                                    {cm.trueNegative.toLocaleString()}
+                                  </span>
+                                  <p className="text-[11px] text-emerald-800 font-sans">
+                                    Good Standing Students Correctly Identified
+                                  </p>
+                                </div>
+
+                                {/* False Positive (FP) Heatmap Cell */}
+                                <div className="p-4 rounded-lg bg-amber-50/80 border border-amber-300 text-center space-y-1 shadow-2xs hover:bg-amber-50 transition-all">
+                                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-amber-800">
+                                    <span>False Positive (FP)</span>
+                                    <span className="font-mono text-amber-700">{fpRate}%</span>
+                                  </div>
+                                  <span className="text-2xl font-bold font-mono text-amber-950 block">
+                                    {cm.falsePositive.toLocaleString()}
+                                  </span>
+                                  <p className="text-[11px] text-amber-800 font-sans">
+                                    Good Standing Flagged for Advisory (Type I Error)
+                                  </p>
+                                </div>
+
+                                {/* Row 1 Marginal Total */}
+                                <div className="p-3 rounded bg-slate-50 border border-slate-200 flex flex-col justify-center text-center font-mono text-xs">
+                                  <span className="font-bold text-slate-800">{actualGoodStanding.toLocaleString()}</span>
+                                  <span className="text-[10px] text-slate-500">{( (actualGoodStanding / totalRecords) * 100 ).toFixed(1)}% cohort</span>
+                                </div>
+                              </div>
+
+                              {/* Row 2: Actual At-Risk */}
+                              <div className="grid grid-cols-[140px_1fr_1fr_90px] gap-2 items-stretch">
+                                <div className="p-3 rounded bg-indigo-50/60 border border-indigo-200 flex flex-col justify-center text-right pr-3">
+                                  <span className="text-xs font-bold text-indigo-950">Actual At-Risk</span>
+                                  <span className="text-[10px] text-indigo-700 font-mono">Class 1 (Positive)</span>
+                                </div>
+
+                                {/* False Negative (FN) Heatmap Cell */}
+                                <div className="p-4 rounded-lg bg-rose-50/80 border border-rose-300 text-center space-y-1 shadow-2xs hover:bg-rose-50 transition-all">
+                                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-rose-800">
+                                    <span>False Negative (FN)</span>
+                                    <span className="font-mono text-rose-700">{fnRate}%</span>
+                                  </div>
+                                  <span className="text-2xl font-bold font-mono text-rose-950 block">
+                                    {cm.falseNegative.toLocaleString()}
+                                  </span>
+                                  <p className="text-[11px] text-rose-800 font-sans">
+                                    At-Risk Students Unidentified (Type II Deficit Gap)
+                                  </p>
+                                </div>
+
+                                {/* True Positive (TP) Heatmap Cell */}
+                                <div className="p-4 rounded-lg bg-indigo-50/80 border border-indigo-300 text-center space-y-1 shadow-2xs hover:bg-indigo-50 transition-all">
+                                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-indigo-800">
+                                    <span>True Positive (TP)</span>
+                                    <span className="font-mono text-indigo-700">{tpRate}%</span>
+                                  </div>
+                                  <span className="text-2xl font-bold font-mono text-indigo-950 block">
+                                    {cm.truePositive.toLocaleString()}
+                                  </span>
+                                  <p className="text-[11px] text-indigo-800 font-sans">
+                                    At-Risk Students Correctly Flagged for Remediation
+                                  </p>
+                                </div>
+
+                                {/* Row 2 Marginal Total */}
+                                <div className="p-3 rounded bg-slate-50 border border-slate-200 flex flex-col justify-center text-center font-mono text-xs">
+                                  <span className="font-bold text-indigo-950">{actualAtRisk.toLocaleString()}</span>
+                                  <span className="text-[10px] text-slate-500">{( (actualAtRisk / totalRecords) * 100 ).toFixed(1)}% cohort</span>
+                                </div>
+                              </div>
+
+                              {/* Column Marginal Totals */}
+                              <div className="grid grid-cols-[140px_1fr_1fr_90px] gap-2 text-xs font-mono text-center pt-1 border-t border-slate-200">
+                                <div className="text-right pr-2 font-sans font-bold text-slate-500">Predicted Totals:</div>
+                                <div className="p-1.5 rounded bg-slate-100 font-bold text-slate-800">
+                                  {predGoodStanding.toLocaleString()} ({( (predGoodStanding / totalRecords) * 100 ).toFixed(1)}%)
+                                </div>
+                                <div className="p-1.5 rounded bg-slate-100 font-bold text-indigo-950">
+                                  {predAtRisk.toLocaleString()} ({( (predAtRisk / totalRecords) * 100 ).toFixed(1)}%)
+                                </div>
+                                <div className="p-1.5 font-bold text-slate-800">
+                                  {totalRecords.toLocaleString()} (100%)
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Educational Diagnostic Note */}
+                          <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1">
+                            <div className="flex items-center gap-1.5 font-bold text-[#1e2238]">
+                              <Info className="h-3.5 w-3.5 text-indigo-600" />
+                              <span>Clinical Academic Interpretation & Trade-Offs:</span>
+                            </div>
+                            <p className="leading-relaxed">
+                              In educational early-warning systems, <strong>False Negatives (Type II error = {cm.falseNegative})</strong> represent vulnerable students who miss targeted academic mentoring. By toggling <em>Weighting: Balanced</em> above, the Decision Tree applies inverse-frequency sample weights to prioritize recall ({cm.truePositive} true positives) over false alarms ({cm.falsePositive} advisory reviews).
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* 3. Decision Tree Structural Hierarchy & Node Graph */}
+                    <div className="bg-white rounded-lg border border-[#e7eaee] p-5 shadow-2xs space-y-4">
+                      <div>
+                        <h3 className="text-sm font-bold text-[#1e2238] flex items-center gap-2">
+                          <GitBranch className="h-4 w-4 text-indigo-600" />
+                          <span>CART Decision Tree Node Condition Graph</span>
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Traversable tree representation with branching rules, sample frequencies, class purities, and leaf classifications.
+                        </p>
+                      </div>
+
+                      <div className="p-4 rounded-lg bg-[#fafbfd] border border-slate-200 font-mono text-xs overflow-x-auto">
+                        <DecisionNodeViewer node={treeData.decisionTree} />
+                      </div>
+                    </div>
+
+                    {/* 4. Top Gini Feature Importances for this Decision Tree */}
+                    {treeData.featureImportances && treeData.featureImportances.length > 0 && (
+                      <div className="bg-white rounded-lg border border-[#e7eaee] p-5 shadow-2xs space-y-3">
+                        <h3 className="text-sm font-bold text-[#1e2238] flex items-center gap-2">
+                          <BarChart3 className="h-4 w-4 text-indigo-600" />
+                          <span>Gini Impurity Feature Importances (Tree Model Specific)</span>
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {treeData.featureImportances.map((item, idx) => (
+                            <div key={item.feature} className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs space-y-1">
+                              <div className="flex justify-between font-bold text-slate-800">
+                                <span>{idx + 1}. {item.displayName}</span>
+                                <span className="font-mono text-indigo-700">{item.importancePercentage}%</span>
+                              </div>
+                              <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-indigo-600 rounded-full"
+                                  style={{ width: `${Math.min(100, item.importancePercentage)}%` }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}

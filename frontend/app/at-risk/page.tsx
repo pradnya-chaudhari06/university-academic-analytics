@@ -18,6 +18,7 @@ import {
   RefreshCw,
   BookOpen,
   XCircle,
+  ArrowRight,
 } from 'lucide-react';
 
 export default function AtRiskPage() {
@@ -543,7 +544,7 @@ export default function AtRiskPage() {
   }
 
   // ===========================================================================
-  // RENDER: FACULTY / ADMIN / ANALYST VIEW — INSTITUTIONAL AT-RISK ROSTER
+  // RENDER: FACULTY / ADMIN / ANALYST VIEW — STUDENT SUPPORT & EARLY INTERVENTION
   // ===========================================================================
   const filtered = students.filter((s) => {
     const matchSearch =
@@ -553,81 +554,130 @@ export default function AtRiskPage() {
     return matchSearch && matchDept;
   });
 
+  const getRecommendedAction = (gpa: number, attendance: number, fails: number) => {
+    if (fails >= 2 || (gpa < 5.0 && attendance < 70)) {
+      return { action: 'Urgent Faculty Mentoring', badgeClass: 'bg-rose-50 text-rose-700 border-rose-200' };
+    }
+    if (attendance < 75.0) {
+      return { action: 'Attendance Counseling', badgeClass: 'bg-amber-50 text-amber-700 border-amber-200' };
+    }
+    if (gpa < 6.00) {
+      return { action: 'Peer Tutoring & Remedial', badgeClass: 'bg-blue-50 text-blue-700 border-blue-200' };
+    }
+    return { action: 'Academic Progress Review', badgeClass: 'bg-slate-50 text-slate-700 border-slate-200' };
+  };
+
   return (
-    <AppShell activeItem="at-risk-students">
+    <AppShell activeItem="student-support">
       <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
         {/* Breadcrumb & Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
-              <span>Analytics</span>
+              <span>Academic Management</span>
               <span>/</span>
-              <span className="text-slate-800 font-medium">At-Risk Students</span>
+              <span className="text-slate-800 font-medium">Student Support</span>
             </div>
             <h1 className="text-xl font-bold tracking-tight text-[#1e2238]">
-              Academic Risk &amp; Early Intervention Roster
+              Student Support &amp; Academic Early Intervention
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Live warehouse classification from FactStudentRiskStatus (Semester VI)
+              Review students requiring academic guidance, monitor intervention indicators, and coordinate support
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-700 shadow-2xs">
-              <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
-              <span>{students.length} Flagged Students</span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#fff4ed] border border-[#fcd5bf] text-xs font-semibold text-[#f87941] shadow-2xs">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              <span>{students.length} Students Requiring Review</span>
             </span>
+            <Link
+              href="/analytics/data-mining"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white border border-[#e7eaee] text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-[#f87941]" />
+              <span className="hidden sm:inline">Advanced</span>
+              <span>Mining Studio</span>
+            </Link>
           </div>
         </div>
 
-        {/* Academic Ground-Truth Audit Card */}
-        <div className="bg-amber-50/70 border border-amber-200 rounded-lg p-4 text-xs text-amber-900 flex items-start gap-3">
-          <ShieldAlert className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <p className="font-semibold text-amber-950">
-              Audited Risk Classification Metadata
+        {/* Ethical Advisory Banner */}
+        <div className="bg-[#fafbfd] border border-[#e7eaee] rounded-lg p-3.5 text-xs text-slate-600 flex items-start gap-3 shadow-2xs">
+          <Info className="h-4 w-4 text-[#f87941] shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <p className="font-bold text-[#1e2238]">
+              Academic Mentorship Advisory Note
             </p>
-            <p className="text-amber-800 leading-relaxed text-[11.5px]">
-              The <strong>108 flagged at-risk students</strong> represent students who have exactly 1 failed course in the active semester. An additional <strong>356 students</strong> maintain a GPA below 6.00 and are tracked for preventative monitoring.
+            <p className="text-[11.5px] text-slate-500 leading-relaxed">
+              Support flags are data-informed indicators to facilitate proactive human review, faculty tutoring, and attendance guidance. They are not definitive determinations or punitive classifications.
             </p>
+          </div>
+        </div>
+
+        {/* Summary Indicators Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+          <div className="bg-white rounded-lg border border-[#e7eaee] p-3.5 shadow-2xs">
+            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Requires Review</span>
+            <span className="text-2xl font-bold text-[#f87941] mt-1 block">{students.length}</span>
+            <span className="text-[11px] text-slate-500">Active Course Deficit</span>
+          </div>
+          <div className="bg-white rounded-lg border border-[#e7eaee] p-3.5 shadow-2xs">
+            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Attendance Deficit</span>
+            <span className="text-2xl font-bold text-amber-600 mt-1 block">
+              {students.filter((s) => s.attendanceRate < 75.0).length}
+            </span>
+            <span className="text-[11px] text-slate-500">Below 75% Cutoff</span>
+          </div>
+          <div className="bg-white rounded-lg border border-[#e7eaee] p-3.5 shadow-2xs">
+            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Multiple Deficits</span>
+            <span className="text-2xl font-bold text-rose-600 mt-1 block">
+              {students.filter((s) => (s.failedCoursesCount ?? 0) >= 2).length}
+            </span>
+            <span className="text-[11px] text-slate-500">2+ Subject Backlogs</span>
+          </div>
+          <div className="bg-white rounded-lg border border-[#e7eaee] p-3.5 shadow-2xs">
+            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Preventative Watch</span>
+            <span className="text-2xl font-bold text-indigo-600 mt-1 block">356</span>
+            <span className="text-[11px] text-slate-500">GPA 5.50–6.00 Band</span>
           </div>
         </div>
 
         {/* Search & Department Filters */}
-        <div className="bg-white rounded-lg border border-[#e7eaee] p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <div className="bg-white rounded-lg border border-[#e7eaee] p-3.5 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="relative w-full sm:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <input
               type="text"
-              placeholder="Search student ID or name..."
+              placeholder="Search by student ID or name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 rounded-md border border-[#e7eaee] text-xs focus:outline-hidden focus:border-[#f87941]"
+              className="w-full pl-9 pr-3 py-1.5 rounded-md border border-[#e7eaee] text-xs focus:outline-none focus:border-[#f87941]"
             />
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <span className="text-xs font-medium text-slate-500">Department:</span>
+            <span className="text-xs font-semibold text-slate-600">Department:</span>
             <select
               value={selectedDept}
               onChange={(e) => setSelectedDept(e.target.value)}
-              className="rounded-md border border-[#e7eaee] bg-white px-3 py-1.5 text-xs font-medium text-slate-700 focus:outline-hidden cursor-pointer"
+              className="rounded-md border border-[#e7eaee] bg-white px-3 py-1.5 text-xs font-medium text-slate-700 focus:outline-none cursor-pointer"
             >
               <option value="ALL">All Departments ({students.length})</option>
-              <option value="CE">Computer Engineering (22)</option>
-              <option value="IT">Information Technology (18)</option>
-              <option value="EXTC">Electronics (28)</option>
-              <option value="MECH">Mechanical (24)</option>
-              <option value="CIVIL">Civil (16)</option>
+              <option value="CE">Computer Engineering</option>
+              <option value="IT">Information Technology</option>
+              <option value="EXTC">Electronics &amp; Telecom</option>
+              <option value="MECH">Mechanical Engineering</option>
+              <option value="CIVIL">Civil Engineering</option>
             </select>
           </div>
         </div>
 
-        {/* At-Risk Table */}
+        {/* Student Support Roster Table */}
         <div className="bg-white rounded-lg border border-[#e7eaee] shadow-2xs overflow-hidden">
           {rosterError ? (
             <div className="p-8 text-center bg-rose-50/30 space-y-2">
-              <p className="text-sm font-semibold text-rose-700">Unable to load at-risk roster</p>
+              <p className="text-sm font-semibold text-rose-700">Unable to load student support records</p>
               <p className="text-xs text-slate-500">{rosterError}</p>
               <button
                 type="button"
@@ -639,7 +689,11 @@ export default function AtRiskPage() {
             </div>
           ) : isRosterLoading ? (
             <div className="p-8 text-center text-xs text-slate-500">
-              Loading at-risk students roster...
+              Loading student support roster...
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-500">
+              No students match the current search or department filter.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -651,48 +705,68 @@ export default function AtRiskPage() {
                     <th className="py-2.5 px-4">Department</th>
                     <th className="py-2.5 px-4 text-right">Current GPA</th>
                     <th className="py-2.5 px-4 text-right">Attendance</th>
-                    <th className="py-2.5 px-4 text-center">Failed Courses</th>
-                    <th className="py-2.5 px-4">Primary Risk Factor</th>
+                    <th className="py-2.5 px-4 text-center">Backlogs</th>
+                    <th className="py-2.5 px-4">Recommended Follow-Up Action</th>
                     <th className="py-2.5 px-4 text-center">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filtered.map((s) => (
-                    <tr key={s.studentId} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-slate-800">{s.studentId}</td>
-                      <td className="py-3 px-4 font-semibold text-[#1e2238]">{s.studentName}</td>
-                      <td className="py-3 px-4">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                          {s.department}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right font-bold text-rose-600">{s.gpa.toFixed(2)}</td>
-                      <td className="py-3 px-4 text-right font-medium text-slate-700">{s.attendanceRate.toFixed(1)}%</td>
-                      <td className="py-3 px-4 text-center">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                          {s.failedCoursesCount}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-slate-600">
-                        <span className="inline-flex items-center gap-1 text-[11px]">
-                          <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-                          {s.primaryRiskFactor || 'Academic Deficit'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <Link
-                          href={`/students/${s.studentId}`}
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#f87941] hover:underline"
-                        >
-                          Profile &rarr;
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
+                <tbody className="divide-y divide-[#e7eaee]">
+                  {filtered.map((s) => {
+                    const rec = getRecommendedAction(s.gpa, s.attendanceRate, s.failedCoursesCount ?? 1);
+                    return (
+                      <tr key={s.studentId} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3 px-4 font-mono font-bold text-slate-800">{s.studentId}</td>
+                        <td className="py-3 px-4 font-semibold text-[#1e2238]">{s.studentName}</td>
+                        <td className="py-3 px-4">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                            {s.department}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right font-bold text-[#f87941]">{s.gpa.toFixed(2)}</td>
+                        <td className="py-3 px-4 text-right font-medium text-slate-700">{s.attendanceRate.toFixed(1)}%</td>
+                        <td className="py-3 px-4 text-center">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                            {s.failedCoursesCount || 1}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border ${rec.badgeClass}`}>
+                            {rec.action}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <Link
+                            href={`/students/${s.studentId}`}
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#f87941] hover:underline"
+                          >
+                            <span>Profile</span>
+                            <ArrowRight className="h-3 w-3" />
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           )}
+        </div>
+
+        {/* Bottom Technical Bridge */}
+        <div className="p-3.5 rounded-lg border border-[#e7eaee] bg-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-2xs text-xs">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-[#f87941]" />
+            <span className="text-slate-600">
+              Need technical classifier model metrics, ROC curves, feature contributions, or K-Means cluster profiling?
+            </span>
+          </div>
+          <Link
+            href="/analytics/data-mining"
+            className="inline-flex items-center gap-1 font-semibold text-[#f87941] hover:text-[#c2410c] hover:underline"
+          >
+            <span>Open Advanced Data Mining Studio</span>
+            <ArrowRight className="h-3 w-3" />
+          </Link>
         </div>
       </div>
     </AppShell>

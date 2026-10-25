@@ -108,15 +108,15 @@ export default function ReportsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
-              <span>Reporting</span>
+              <span>Academic Management</span>
               <span>/</span>
-              <span className="text-slate-800 font-medium">Institutional Reports</span>
+              <span className="text-slate-800 font-medium">Reports</span>
             </div>
             <h1 className="text-xl font-bold tracking-tight text-[#1e2238]">
-              Academic Intelligence & Institutional Reports
+              Academic Reports &amp; Institutional Dossiers
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Live conformed warehouse reports queried directly from Star Schema facts with RFC-4180 CSV export
+              Generate and download official academic summaries, department rankings, and student support rosters
             </p>
           </div>
 
@@ -130,6 +130,21 @@ export default function ReportsPage() {
               <span>Print Dossier</span>
             </button>
           </div>
+        </div>
+
+        {/* Reporting Scope & Active Period Banner */}
+        <div className="bg-[#fafbfd] border border-[#e7eaee] rounded-lg p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs shadow-2xs">
+          <div className="flex items-center gap-3">
+            <span className="font-semibold text-slate-700">Active Reporting Window:</span>
+            <span className="px-2 py-0.5 rounded bg-white border border-[#e7eaee] font-medium text-slate-800">
+              AY 2025–26 • Semester VI
+            </span>
+            <span className="text-slate-400 hidden sm:inline">|</span>
+            <span className="text-slate-600 hidden sm:inline">Data Scope: All 5 Engineering Departments</span>
+          </div>
+          <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+            Live Verified Warehouse Export
+          </span>
         </div>
 
         {/* Report Templates Grid */}

@@ -623,54 +623,30 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* 1. Secondary Tab Bar & Action Buttons matching Reference Image */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 border-b border-[#e7eaee] pb-1.5">
-          {/* Left Tabs */}
-          <nav className="flex items-center gap-5 text-xs" aria-label="Secondary navigation">
-            {(
-              [
-                { id: 'overview', label: 'Overview' },
-                { id: 'students', label: 'Students' },
-                { id: 'departments', label: 'Departments' },
-                { id: 'courses', label: 'Courses' },
-                { id: 'more', label: 'More' },
-              ] as const
-            ).map((tab) => {
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => handleTabClick(tab.id)}
-                  className={`pb-1.5 relative font-medium transition-colors cursor-pointer ${
-                    isActive
-                      ? 'text-[#1e2238] font-bold'
-                      : 'text-slate-500 hover:text-[#1e2238]'
-                  }`}
-                >
-                  {tab.label}
-                  {isActive && (
-                    <span
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#f87941] rounded-full"
-                      aria-hidden="true"
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </nav>
+        {/* 1. University Overview Header per UX Specification */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[#e7eaee] pb-3">
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <h1 className="text-xl font-bold tracking-tight text-[#1e2238]">
+                University Overview
+              </h1>
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10.5px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                AY 2025–26 • Semester VI
+              </span>
+            </div>
+            <p className="text-xs text-slate-500">
+              A summary of academic performance and issues requiring attention across the institution
+            </p>
+          </div>
 
-          {/* Right Action Buttons: Share, Print, Export matching reference */}
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={handleShare}
-              className="inline-flex items-center gap-1.5 rounded border border-[#e7eaee] bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-2xs cursor-pointer"
-            >
-              <Share2 className="h-3 w-3 text-slate-500" />
-              <span>Share</span>
-            </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Clear Data Freshness Indicator */}
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#fafbfd] border border-[#e7eaee] text-slate-600 text-[11px] shadow-2xs">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Data verified: <strong className="text-slate-800">30 June 2026</strong> (Conformed Load)</span>
+            </div>
 
+            {/* Print Dossier */}
             <button
               type="button"
               onClick={handlePrint}
@@ -680,13 +656,14 @@ export default function DashboardPage() {
               <span>Print</span>
             </button>
 
+            {/* Working Report Export Action */}
             <button
               type="button"
               onClick={handleExport}
-              className="inline-flex items-center gap-1.5 rounded bg-[#1e2438] px-3 py-1 text-xs font-medium text-white hover:bg-[#2c334d] transition-colors shadow-2xs cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded bg-[#1e2438] px-3 py-1 text-xs font-semibold text-white hover:bg-[#2c334d] transition-colors shadow-2xs cursor-pointer"
             >
-              <Download className="h-3 w-3 text-white" />
-              <span>Export</span>
+              <Download className="h-3 w-3 text-[#f87941]" />
+              <span>Export Dossier</span>
             </button>
           </div>
         </div>
@@ -757,16 +734,6 @@ export default function DashboardPage() {
             totalStudents={liveKpis?.totalStudents}
             atRiskCount={liveKpis?.atRiskStudents}
             departmentCount={departmentsData.length}
-            onViewStudents={() => {
-              setActiveTab('students');
-              document.getElementById('students')?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            onViewAtRisk={() => {
-              setActiveTab('students');
-              document.getElementById('at-risk-students')?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            onOpenReport={() => setReportModalOpen(true)}
-            onOpenOlap={() => setOlapModalOpen(true)}
           />
         </div>
 

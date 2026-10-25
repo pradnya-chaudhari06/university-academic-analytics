@@ -738,19 +738,22 @@ class AcademicClassificationEngine:
     def train_decision_tree(
         self,
         max_depth: int = 3,
-        criterion: str = "gini"
+        criterion: str = "gini",
+        class_weight: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Trains and validates Decision Tree model on 75/25 stratified cohort split.
-        Returns accuracy, confusion matrix, feature importances, and tree node graph.
-        Maintained for backwards compatibility with the Decision Tree Inspector.
+        Computes actual test metrics (accuracy, positive-class precision/recall/F1,
+        macro-averaged metrics, ROC-AUC) and a full confusion matrix from unseen test predictions.
+        Maintained for backwards compatibility and real-time model inspection.
         """
         max_depth = max(2, min(6, int(max_depth)))
         criterion = "entropy" if criterion.lower() == "entropy" else "gini"
+        cw = "balanced" if class_weight == "balanced" else None
 
         X, y, feature_names, target_names = feature_store.get_classification_dataset(target_col="is_at_risk")
 
-        # Stratified train/test split
+        # Stratified train/test split (75% train, 25% unseen test) with fixed random_state=42
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.25, random_state=42, stratify=y
         )
@@ -758,31 +761,104 @@ class AcademicClassificationEngine:
         clf = DecisionTreeClassifier(
             max_depth=max_depth,
             criterion=criterion,
+            class_weight=cw,
             random_state=42
         )
         clf.fit(X_train, y_train)
 
-        # Predictions & Evaluation
+        # Predictions & Probabilities on unseen test set
         y_pred = clf.predict(X_test)
         y_prob = clf.predict_proba(X_test)[:, 1] if hasattr(clf, "predict_proba") else None
 
+        # 1. Overall Accuracy and Balanced Accuracy
         acc = round(float(accuracy_score(y_test, y_pred)), 4)
-        prec = round(float(precision_score(y_test, y_pred, zero_division=0)), 4)
-        rec = round(float(recall_score(y_test, y_pred, zero_division=0)), 4)
-        f1 = round(float(f1_score(y_test, y_pred, zero_division=0)), 4)
+        bal_acc = round(float(balanced_accuracy_score(y_test, y_pred)), 4)
+
+        # 2. Positive Class (At-Risk / 1) Metrics
+        pos_prec = round(float(precision_score(y_test, y_pred, pos_label=1, zero_division=0)), 4)
+        pos_rec = round(float(recall_score(y_test, y_pred, pos_label=1, zero_division=0)), 4)
+        pos_f1 = round(float(f1_score(y_test, y_pred, pos_label=1, zero_division=0)), 4)
+
+        # 3. Negative Class (Good Standing / 0) Metrics
+        neg_prec = round(float(precision_score(y_test, y_pred, pos_label=0, zero_division=0)), 4)
+        neg_rec = round(float(recall_score(y_test, y_pred, pos_label=0, zero_division=0)), 4)
+        neg_f1 = round(float(f1_score(y_test, y_pred, pos_label=0, zero_division=0)), 4)
+
+        # 4. Macro and Weighted Averaged Metrics
+        macro_prec = round(float(precision_score(y_test, y_pred, average="macro", zero_division=0)), 4)
+        macro_rec = round(float(recall_score(y_test, y_pred, average="macro", zero_division=0)), 4)
+        macro_f1 = round(float(f1_score(y_test, y_pred, average="macro", zero_division=0)), 4)
+        weighted_f1 = round(float(f1_score(y_test, y_pred, average="weighted", zero_division=0)), 4)
+
+        # 5. ROC-AUC
         auc = round(float(roc_auc_score(y_test, y_prob)), 4) if y_prob is not None else 1.0
 
-        # Confusion Matrix
+        # 6. Confusion Matrix computation
         cm = confusion_matrix(y_test, y_pred)
+        tn = int(cm[0][0])
+        fp = int(cm[0][1])
+        fn = int(cm[1][0])
+        tp = int(cm[1][1])
+
+        total_test_neg = tn + fp  # Actual Good Standing (1,178)
+        total_test_pos = fn + tp  # Actual At-Risk (27)
+
+        tn_rate = round((tn / total_test_neg) * 100, 1) if total_test_neg > 0 else 0.0
+        fp_rate = round((fp / total_test_neg) * 100, 1) if total_test_neg > 0 else 0.0
+        fn_rate = round((fn / total_test_pos) * 100, 1) if total_test_pos > 0 else 0.0
+        tp_rate = round((tp / total_test_pos) * 100, 1) if total_test_pos > 0 else 0.0
+
         cm_data = {
-            "trueNegative": int(cm[0][0]),
-            "falsePositive": int(cm[0][1]),
-            "falseNegative": int(cm[1][0]),
-            "truePositive": int(cm[1][1]),
-            "labels": ["Good Standing", "At-Risk"]
+            "trueNegative": tn,
+            "falsePositive": fp,
+            "falseNegative": fn,
+            "truePositive": tp,
+            "trueNegativeRate": tn_rate,
+            "falsePositiveRate": fp_rate,
+            "falseNegativeRate": fn_rate,
+            "truePositiveRate": tp_rate,
+            "labels": ["Good Standing", "At-Risk"],
+            "axisLabels": {
+                "rows": "Actual Class",
+                "columns": "Predicted Class"
+            },
+            "matrixGrid": [
+                [
+                    {
+                        "actual": "Good Standing",
+                        "predicted": "Good Standing",
+                        "count": tn,
+                        "type": "TN",
+                        "percentage": tn_rate
+                    },
+                    {
+                        "actual": "Good Standing",
+                        "predicted": "At-Risk",
+                        "count": fp,
+                        "type": "FP",
+                        "percentage": fp_rate
+                    }
+                ],
+                [
+                    {
+                        "actual": "At-Risk",
+                        "predicted": "Good Standing",
+                        "count": fn,
+                        "type": "FN",
+                        "percentage": fn_rate
+                    },
+                    {
+                        "actual": "At-Risk",
+                        "predicted": "At-Risk",
+                        "count": tp,
+                        "type": "TP",
+                        "percentage": tp_rate
+                    }
+                ]
+            ]
         }
 
-        # Feature Importances (Gini/MDI Importance)
+        # 7. Feature Importances (Gini/MDI Importance)
         importances = clf.feature_importances_
         feature_importance_list = []
         for idx, imp in enumerate(importances):
@@ -795,25 +871,79 @@ class AcademicClassificationEngine:
                 })
         feature_importance_list.sort(key=lambda x: x["importance"], reverse=True)
 
-        # Build Serializable Tree Node Graph
+        # 8. Build Serializable Tree Node Graph
         tree_graph = self._serialize_tree(clf, feature_names, target_names)
+
+        run_id = f"dt_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        eval_timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%d %b %Y · %H:%M:%S UTC")
+
+        evaluation_meta = {
+            "runId": run_id,
+            "evaluatedAt": eval_timestamp,
+            "trainSetSize": len(X_train),
+            "testSetSize": len(X_test),
+            "trainSplitRatio": "75% Train / 25% Unseen Test",
+            "randomState": 42,
+            "positiveClass": "At-Risk (1)",
+            "negativeClass": "Good Standing (0)",
+            "stratified": True,
+            "classDistribution": {
+                "totalGoodStanding": int(np.sum(y == 0)),
+                "totalAtRisk": int(np.sum(y == 1)),
+                "trainGoodStanding": int(np.sum(y_train == 0)),
+                "trainAtRisk": int(np.sum(y_train == 1)),
+                "testGoodStanding": total_test_neg,
+                "testAtRisk": total_test_pos
+            }
+        }
 
         return {
             "algorithm": "Decision Tree Classifier",
             "criterion": criterion,
             "maxDepth": max_depth,
+            "classWeight": cw,
             "totalCohortSize": len(X),
             "trainingSetSize": len(X_train),
             "testSetSize": len(X_test),
+            "runId": run_id,
+            "evaluatedAt": eval_timestamp,
+            "evaluation": evaluation_meta,
             "metrics": {
+                # Standard and backwards-compatible keys
                 "accuracy": acc,
                 "accuracyPct": f"{round(acc * 100, 1)}%",
-                "precision": prec,
-                "precisionPct": f"{round(prec * 100, 1)}%",
-                "recall": rec,
-                "recallPct": f"{round(rec * 100, 1)}%",
-                "f1Score": f1,
-                "rocAuc": auc
+                "precision": pos_prec,
+                "precisionPct": f"{round(pos_prec * 100, 1)}%",
+                "recall": pos_rec,
+                "recallPct": f"{round(pos_rec * 100, 1)}%",
+                "f1Score": pos_f1,
+                "f1ScorePct": f"{round(pos_f1 * 100, 1)}%",
+                "rocAuc": auc,
+                # Explicit positive class (At-Risk) keys
+                "atRiskPrecision": pos_prec,
+                "atRiskPrecisionPct": f"{round(pos_prec * 100, 1)}%",
+                "atRiskRecall": pos_rec,
+                "atRiskRecallPct": f"{round(pos_rec * 100, 1)}%",
+                "atRiskF1": pos_f1,
+                "atRiskF1Pct": f"{round(pos_f1 * 100, 1)}%",
+                # Explicit negative class (Good Standing) keys
+                "goodStandingPrecision": neg_prec,
+                "goodStandingPrecisionPct": f"{round(neg_prec * 100, 1)}%",
+                "goodStandingRecall": neg_rec,
+                "goodStandingRecallPct": f"{round(neg_rec * 100, 1)}%",
+                "goodStandingF1": neg_f1,
+                "goodStandingF1Pct": f"{round(neg_f1 * 100, 1)}%",
+                # Macro & Weighted metrics
+                "macroPrecision": macro_prec,
+                "macroPrecisionPct": f"{round(macro_prec * 100, 1)}%",
+                "macroRecall": macro_rec,
+                "macroRecallPct": f"{round(macro_rec * 100, 1)}%",
+                "macroF1": macro_f1,
+                "macroF1Pct": f"{round(macro_f1 * 100, 1)}%",
+                "weightedF1": weighted_f1,
+                "weightedF1Pct": f"{round(weighted_f1 * 100, 1)}%",
+                "balancedAccuracy": bal_acc,
+                "balancedAccuracyPct": f"{round(bal_acc * 100, 1)}%"
             },
             "confusionMatrix": cm_data,
             "featureImportances": feature_importance_list,

@@ -368,7 +368,38 @@ export interface ClassificationMetrics {
   recall: number;
   recallPct: string;
   f1Score: number;
+  f1ScorePct?: string;
   rocAuc: number;
+  atRiskPrecision?: number;
+  atRiskPrecisionPct?: string;
+  atRiskRecall?: number;
+  atRiskRecallPct?: string;
+  atRiskF1?: number;
+  atRiskF1Pct?: string;
+  goodStandingPrecision?: number;
+  goodStandingPrecisionPct?: string;
+  goodStandingRecall?: number;
+  goodStandingRecallPct?: string;
+  goodStandingF1?: number;
+  goodStandingF1Pct?: string;
+  macroPrecision?: number;
+  macroPrecisionPct?: string;
+  macroRecall?: number;
+  macroRecallPct?: string;
+  macroF1?: number;
+  macroF1Pct?: string;
+  weightedF1?: number;
+  weightedF1Pct?: string;
+  balancedAccuracy?: number;
+  balancedAccuracyPct?: string;
+}
+
+export interface ConfusionMatrixGridCell {
+  actual: string;
+  predicted: string;
+  count: number;
+  type: 'TN' | 'FP' | 'FN' | 'TP';
+  percentage: number;
 }
 
 export interface ConfusionMatrixData {
@@ -376,7 +407,36 @@ export interface ConfusionMatrixData {
   falsePositive: number;
   falseNegative: number;
   truePositive: number;
+  trueNegativeRate?: number;
+  falsePositiveRate?: number;
+  falseNegativeRate?: number;
+  truePositiveRate?: number;
   labels: [string, string];
+  axisLabels?: {
+    rows: string;
+    columns: string;
+  };
+  matrixGrid?: ConfusionMatrixGridCell[][];
+}
+
+export interface DecisionTreeEvaluationMeta {
+  runId: string;
+  evaluatedAt: string;
+  trainSetSize: number;
+  testSetSize: number;
+  trainSplitRatio: string;
+  randomState: number;
+  positiveClass: string;
+  negativeClass: string;
+  stratified: boolean;
+  classDistribution: {
+    totalGoodStanding: number;
+    totalAtRisk: number;
+    trainGoodStanding: number;
+    trainAtRisk: number;
+    testGoodStanding: number;
+    testAtRisk: number;
+  };
 }
 
 export interface FeatureImportanceItem {
@@ -409,9 +469,13 @@ export interface DecisionTreeMiningResponse {
   algorithm: string;
   criterion: 'gini' | 'entropy' | string;
   maxDepth: number;
+  classWeight?: string | null;
   totalCohortSize: number;
   trainingSetSize: number;
   testSetSize: number;
+  runId?: string;
+  evaluatedAt?: string;
+  evaluation?: DecisionTreeEvaluationMeta;
   metrics: ClassificationMetrics;
   confusionMatrix: ConfusionMatrixData;
   featureImportances: FeatureImportanceItem[];
